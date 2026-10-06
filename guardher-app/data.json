@@ -1,0 +1,285 @@
+{
+  "user": {
+    "id": "user-001",
+    "name": "Ayesha Ahmed",
+    "phone": "+92-300-1234567",
+    "email": "ayesha@guardher.pk",
+    "trustedContacts": [
+      {
+        "id": "tc-001",
+        "name": "Ammi (Mother)",
+        "phone": "+92-321-9876543",
+        "relationship": "Parent"
+      },
+      {
+        "id": "tc-002",
+        "name": "Ali (Brother)",
+        "phone": "+92-333-4567890",
+        "relationship": "Brother"
+      },
+      {
+        "id": "tc-003",
+        "name": "Sarah (Friend)",
+        "phone": "+92-312-5551234",
+        "relationship": "Friend"
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "ride-1791224959310-tq6b5z",
+      "userId": "user-001",
+      "ride": {
+        "platform": "Yango",
+        "driverName": "ali",
+        "vehicleModel": "alto",
+        "numberPlate": "avv900",
+        "pickup": "dha",
+        "destination": "gulshan"
+      },
+      "trustedContacts": [
+        {
+          "id": "tc-001",
+          "name": "Ammi (Mother)",
+          "phone": "+92-321-9876543",
+          "relationship": "Parent"
+        }
+      ],
+      "status": "incident",
+      "startTime": 1791224959310,
+      "locationHistory": [
+        {
+          "lat": 24.8607,
+          "lng": 67.0011,
+          "timestamp": 1791224962558,
+          "speed": 30
+        },
+        {
+          "lat": 24.861158707758154,
+          "lng": 67.0012365667513,
+          "timestamp": 1791224965560,
+          "speed": 30
+        },
+        {
+          "lat": 24.860820531797906,
+          "lng": 67.00120406478851,
+          "timestamp": 1791224969501,
+          "speed": 30
+        },
+        {
+          "lat": 24.860832102431328,
+          "lng": 67.00163408526791,
+          "timestamp": 1791224973518,
+          "speed": 30
+        },
+        {
+          "lat": 24.861134652753,
+          "lng": 67.00187530230993,
+          "timestamp": 1791224977521,
+          "speed": 30
+        },
+        {
+          "lat": 24.86098669736951,
+          "lng": 67.00231370882045,
+          "timestamp": 1791224981521,
+          "speed": 30
+        },
+        {
+          "lat": 24.861537467592296,
+          "lng": 67.00237719402084,
+          "timestamp": 1791224985517,
+          "speed": 30
+        },
+        {
+          "lat": 24.861428628055933,
+          "lng": 67.00266300033198,
+          "timestamp": 1791224989513,
+          "speed": 30
+        },
+        {
+          "lat": 24.861628957504102,
+          "lng": 67.00259792231968,
+          "timestamp": 1791224993505,
+          "speed": 30
+        },
+        {
+          "lat": 24.86195622130946,
+          "lng": 67.00267676705776,
+          "timestamp": 1791224997500,
+          "speed": 30
+        },
+        {
+          "lat": 24.86228607110142,
+          "lng": 67.00242193901911,
+          "timestamp": 1791225001113,
+          "speed": 30
+        },
+        {
+          "lat": 24.862066573182414,
+          "lng": 67.00287691699381,
+          "timestamp": 1791225004113,
+          "speed": 30
+        },
+        {
+          "lat": 24.862032775509682,
+          "lng": 67.00335475948926,
+          "timestamp": 1791225007503,
+          "speed": 30
+        },
+        {
+          "lat": 24.861891745038672,
+          "lng": 67.00403195436223,
+          "timestamp": 1791225011500,
+          "speed": 30
+        },
+        {
+          "lat": 24.861771658179563,
+          "lng": 67.00472923193972,
+          "timestamp": 1791225014505,
+          "speed": 30
+        },
+        {
+          "lat": 24.8646085286673,
+          "lng": 67.00779647370061,
+          "timestamp": 1791225078170,
+          "speed": 30
+        }
+      ],
+      "currentLocation": {
+        "lat": 24.8646085286673,
+        "lng": 67.00779647370061,
+        "timestamp": 1791225078170,
+        "speed": 30
+      }
+    }
+  ],
+  "incidents": [
+    {
+      "id": "inc-1791224963926-2r0l1t",
+      "sessionId": "ride-1791224959310-tq6b5z",
+      "session": {
+        "id": "ride-1791224959310-tq6b5z",
+        "userId": "user-001",
+        "ride": {
+          "platform": "Yango",
+          "driverName": "ali",
+          "vehicleModel": "alto",
+          "numberPlate": "avv900",
+          "pickup": "dha",
+          "destination": "gulshan"
+        },
+        "trustedContacts": [
+          {
+            "id": "tc-001",
+            "name": "Ammi (Mother)",
+            "phone": "+92-321-9876543",
+            "relationship": "Parent"
+          }
+        ],
+        "status": "active",
+        "startTime": 1791224959310,
+        "locationHistory": [
+          {
+            "lat": 24.8607,
+            "lng": 67.0011,
+            "timestamp": 1791224962558,
+            "speed": 30
+          },
+          {
+            "lat": 24.861158707758154,
+            "lng": 67.0012365667513,
+            "timestamp": 1791224965560,
+            "speed": 30
+          },
+          {
+            "lat": 24.860820531797906,
+            "lng": 67.00120406478851,
+            "timestamp": 1791224969501,
+            "speed": 30
+          },
+          {
+            "lat": 24.860832102431328,
+            "lng": 67.00163408526791,
+            "timestamp": 1791224973518,
+            "speed": 30
+          },
+          {
+            "lat": 24.861134652753,
+            "lng": 67.00187530230993,
+            "timestamp": 1791224977521,
+            "speed": 30
+          },
+          {
+            "lat": 24.86098669736951,
+            "lng": 67.00231370882045,
+            "timestamp": 1791224981521,
+            "speed": 30
+          },
+          {
+            "lat": 24.861537467592296,
+            "lng": 67.00237719402084,
+            "timestamp": 1791224985517,
+            "speed": 30
+          },
+          {
+            "lat": 24.861428628055933,
+            "lng": 67.00266300033198,
+            "timestamp": 1791224989513,
+            "speed": 30
+          },
+          {
+            "lat": 24.861628957504102,
+            "lng": 67.00259792231968,
+            "timestamp": 1791224993505,
+            "speed": 30
+          },
+          {
+            "lat": 24.86195622130946,
+            "lng": 67.00267676705776,
+            "timestamp": 1791224997500,
+            "speed": 30
+          },
+          {
+            "lat": 24.86228607110142,
+            "lng": 67.00242193901911,
+            "timestamp": 1791225001113,
+            "speed": 30
+          },
+          {
+            "lat": 24.862066573182414,
+            "lng": 67.00287691699381,
+            "timestamp": 1791225004113,
+            "speed": 30
+          },
+          {
+            "lat": 24.862032775509682,
+            "lng": 67.00335475948926,
+            "timestamp": 1791225007503,
+            "speed": 30
+          },
+          {
+            "lat": 24.861891745038672,
+            "lng": 67.00403195436223,
+            "timestamp": 1791225011500,
+            "speed": 30
+          },
+          {
+            "lat": 24.861771658179563,
+            "lng": 67.00472923193972,
+            "timestamp": 1791225014505,
+            "speed": 30
+          }
+        ],
+        "currentLocation": {
+          "lat": 24.8607,
+          "lng": 67.0011,
+          "timestamp": 1791224962558,
+          "speed": 30
+        }
+      },
+      "alertLevel": "unsafe",
+      "triggerTime": 1791224963926,
+      "resolution": "dispatched"
+    }
+  ]
+}
