@@ -31,10 +31,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern flex items-center justify-center p-6 relative">
       <div className="w-full max-w-md glass-card p-8 sm:p-10 shadow-2xl relative z-10 border border-pink-200">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white flex items-center justify-center shadow-md">
-              <ShieldIcon className="w-6 h-6" />
-            </div>
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-4 group">
+            <img src="/logo.png" alt="GuardHer Logo" className="w-10 h-10 rounded-xl object-cover shadow-md border border-pink-200 group-hover:scale-105 transition-transform" />
             <span className="text-2xl font-black tracking-tight text-gradient-pink">
               GuardHer
             </span>

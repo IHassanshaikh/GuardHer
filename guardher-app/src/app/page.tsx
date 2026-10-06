@@ -127,9 +127,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 border-b border-pink-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 via-rose-500 to-fuchsia-600 flex items-center justify-center text-white shadow-md shadow-pink-500/30 group-hover:scale-105 transition-transform">
-              <ShieldIcon className="w-6 h-6" />
-            </div>
+            <img src="/logo.png" alt="GuardHer Logo" className="w-10 h-10 rounded-xl object-cover shadow-md shadow-pink-500/30 group-hover:scale-105 transition-transform border border-pink-200" />
             <div className="flex flex-col">
               <span className="text-2xl font-extrabold tracking-tight text-gradient-pink">
                 GuardHer
@@ -650,9 +648,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-pink-500 text-white flex items-center justify-center font-bold">
-                <ShieldIcon className="w-5 h-5" />
-              </div>
+              <img src="/logo.png" alt="GuardHer Logo" className="w-9 h-9 rounded-lg object-cover shadow-sm border border-pink-400/30" />
               <span className="text-xl font-extrabold text-white">GuardHer</span>
             </div>
             <p className="text-xs text-pink-400 font-medium leading-relaxed">
