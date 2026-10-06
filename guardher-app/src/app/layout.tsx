@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "GuardHer — Women's Safety Intelligence",
   description:
     "A real-time ride safety and emergency coordination platform that preloads ride intelligence before travel.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
