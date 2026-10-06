@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { RideSession, IncidentCase } from "@/lib/types";
+import InteractiveMap from "@/components/InteractiveMap";
 
 function AlertTriangleIcon({ className = "" }: { className?: string }) {
   return (
@@ -46,9 +47,9 @@ export default function ContactViewPage() {
 
   return (
     <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern flex flex-col items-center justify-center p-6 text-pink-950">
-      <div className="w-full max-w-md glass-card rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-white h-[780px] flex flex-col relative">
+      <div className="w-full max-w-lg glass-card rounded-[2.5rem] shadow-2xl overflow-hidden border-4 border-white h-[820px] flex flex-col relative">
         {/* PHONE TOP BAR */}
-        <div className="bg-pink-950 text-white px-6 py-2.5 text-xs flex justify-between font-bold">
+        <div className="bg-pink-950 text-white px-6 py-2.5 text-xs flex justify-between font-bold shrink-0">
           <span>03:41 PM</span>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-pink-300">PAKISTAN 4G</span>
@@ -57,7 +58,7 @@ export default function ContactViewPage() {
         </div>
 
         {/* HEADER */}
-        <div className="bg-white/80 border-b border-pink-200 px-6 py-4 text-center">
+        <div className="bg-white/80 border-b border-pink-200 px-6 py-4 text-center shrink-0">
           <div className="flex items-center justify-center gap-2 mb-1">
             <img src="/logo.png" alt="GuardHer Logo" className="w-6 h-6 rounded-md object-cover" />
             <h1 className="font-extrabold text-pink-950 text-base">Guardian Live Tracking Inbox</h1>
@@ -74,38 +75,44 @@ export default function ContactViewPage() {
           )}
 
           {activeSessions.map((session) => (
-            <div key={session.id} className="bg-white p-5 rounded-2xl shadow-md border border-pink-200">
-              <div className="flex items-center gap-2 mb-2">
+            <div key={session.id} className="bg-white p-5 rounded-2xl shadow-md border border-pink-200 space-y-3">
+              <div className="flex items-center gap-2">
                 <MapPinIcon className="w-5 h-5 text-pink-600" />
                 <span className="text-xs font-black text-pink-950 uppercase tracking-wider">GuardHer Protection Shared</span>
               </div>
-              <p className="text-xs text-pink-900 font-medium mb-3 leading-relaxed">
+              <p className="text-xs text-pink-900 font-medium leading-relaxed">
                 Ayesha shared her live ride session with you. She is traveling from <strong>{session.ride.pickup}</strong> to <strong>{session.ride.destination}</strong>.
               </p>
-              <div className="bg-pink-50 text-pink-950 text-xs p-3 rounded-xl mb-3 border border-pink-200 font-semibold space-y-1">
+              
+              {/* INTERACTIVE MAP COMPONENT IN GUARDIAN INBOX */}
+              <InteractiveMap
+                lat={session.currentLocation?.lat || 31.4704}
+                lng={session.currentLocation?.lng || 74.4098}
+                pickup={session.ride.pickup}
+                destination={session.ride.destination}
+                vehiclePlate={session.ride.numberPlate}
+                driverName={session.ride.driverName}
+                status={session.status === "incident" ? "sos" : "active"}
+              />
+
+              <div className="bg-pink-50 text-pink-950 text-xs p-3 rounded-xl border border-pink-200 font-semibold space-y-1">
                 <div><span className="text-pink-400">Service:</span> {session.ride.platform}</div>
                 <div><span className="text-pink-400">Vehicle:</span> {session.ride.vehicleModel}</div>
                 <div><span className="text-pink-400">Plate:</span> <span className="font-mono text-pink-600 bg-white px-1.5 py-0.5 rounded border border-pink-200">{session.ride.numberPlate}</span></div>
-              </div>
-              <div className="text-[11px] flex items-center justify-between font-bold">
-                <span className="flex items-center gap-1.5 text-emerald-600">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/> LIVE TRACKING ACTIVE
-                </span>
-                <span className="text-pink-600 underline cursor-pointer">View Map Stream</span>
               </div>
             </div>
           ))}
 
           {activeIncidents.map((incident) => (
-            <div key={incident.id} className="bg-rose-50 p-5 rounded-2xl shadow-md border border-rose-300">
-              <div className="flex items-center gap-2 mb-2">
+            <div key={incident.id} className="bg-rose-50 p-5 rounded-2xl shadow-md border border-rose-300 space-y-3">
+              <div className="flex items-center gap-2">
                 <AlertTriangleIcon className="w-5 h-5 text-rose-600 animate-bounce" />
                 <span className="text-xs font-black text-rose-700 uppercase tracking-widest">EMERGENCY ALERT TRIGGERED</span>
               </div>
-              <p className="text-xs text-rose-950 font-extrabold mb-3">
+              <p className="text-xs text-rose-950 font-extrabold">
                 Ayesha pressed {incident.alertLevel === "sos" ? "SOS EMERGENCY DISPATCH" : "UNSAFE ALERT"}!
               </p>
-              <p className="text-[11px] text-rose-800 font-medium mb-3">
+              <p className="text-[11px] text-rose-800 font-medium">
                 Last verified GPS lock: Lat {incident.session.currentLocation?.lat.toFixed(4)}, Lng {incident.session.currentLocation?.lng.toFixed(4)}
               </p>
               <div className="text-[11px] text-rose-800 bg-rose-100 p-3 rounded-xl font-bold border border-rose-200">

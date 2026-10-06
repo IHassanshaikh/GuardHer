@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { IncidentCase } from "@/lib/types";
+import InteractiveMap from "@/components/InteractiveMap";
 
 function ShieldIcon({ className = "" }: { className?: string }) {
   return (
@@ -154,8 +155,8 @@ export default function DashboardPage() {
         {/* MAIN CASE DETAIL */}
         <main className="flex-1 bg-[#FFF5F8] p-8 overflow-y-auto">
           {selectedIncident ? (
-            <div className="max-w-4xl mx-auto">
-              <div className={`rounded-2xl p-6 mb-6 border shadow-md ${
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className={`rounded-2xl p-6 border shadow-md ${
                 selectedIncident.alertLevel === "sos" ? "bg-rose-50 border-rose-300 text-rose-950" : "bg-amber-50 border-amber-300 text-amber-950"
               }`}>
                 <div className="flex items-center gap-4">
@@ -171,7 +172,18 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* LIVE MAP SHOWCASE ON DISPATCH DASHBOARD */}
+              <InteractiveMap
+                lat={selectedIncident.session.currentLocation?.lat || 31.4704}
+                lng={selectedIncident.session.currentLocation?.lng || 74.4098}
+                pickup={selectedIncident.session.ride.pickup}
+                destination={selectedIncident.session.ride.destination}
+                vehiclePlate={selectedIncident.session.ride.numberPlate}
+                driverName={selectedIncident.session.ride.driverName}
+                status={selectedIncident.alertLevel}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="glass-card p-6">
                   <h3 className="text-xs font-black uppercase tracking-wider text-pink-600 mb-4 pb-2 border-b border-pink-100">
                     Ride Intelligence Data
@@ -187,7 +199,7 @@ export default function DashboardPage() {
 
                 <div className="glass-card p-6">
                   <h3 className="text-xs font-black uppercase tracking-wider text-pink-600 mb-4 pb-2 border-b border-pink-100 flex justify-between items-center">
-                    <span>Live Telemetry Lock</span>
+                    <span>Live Telemetry Stream</span>
                     <span className="text-emerald-600 font-bold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/> LIVE GPS</span>
                   </h3>
                   {selectedIncident.session.currentLocation ? (
@@ -210,7 +222,7 @@ export default function DashboardPage() {
               </div>
 
               {selectedIncident.resolution === "pending" ? (
-                <div className="flex flex-wrap gap-4 mt-6 pt-6 border-t border-pink-200">
+                <div className="flex flex-wrap gap-4 pt-4 border-t border-pink-200">
                   <button onClick={() => resolveIncident(selectedIncident.id, "dispatched")} className="px-6 py-3 bg-rose-600 text-white rounded-xl text-xs font-extrabold shadow-lg hover:bg-rose-700 transition-all">
                     Dispatch Rescue Units
                   </button>
@@ -222,7 +234,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-6 pt-6 border-t border-pink-200 flex items-center gap-2 text-sm font-extrabold text-pink-800">
+                <div className="pt-4 border-t border-pink-200 flex items-center gap-2 text-sm font-extrabold text-pink-800">
                   <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
                   Status: <span className="uppercase text-emerald-700">{selectedIncident.resolution}</span>
                 </div>

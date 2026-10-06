@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { RideSession, AlertLevel } from "@/lib/types";
+import InteractiveMap from "@/components/InteractiveMap";
 
 function ShieldIcon({ className = "" }: { className?: string }) {
   return (
@@ -146,6 +147,10 @@ function LiveRideContent() {
     );
   }
 
+  const whatsappMessage = encodeURIComponent(
+    `🚨 EMERGENCY ALERT: I am traveling via ${session.ride.platform} (${session.ride.vehicleModel} - ${session.ride.numberPlate}). Driver: ${session.ride.driverName}. Track my live position on GuardHer: http://localhost:3000/contact-view`
+  );
+
   if (rideEnded) {
     return (
       <div className="min-h-screen bg-[#FFF5F8] flex flex-col items-center justify-center px-6">
@@ -167,7 +172,7 @@ function LiveRideContent() {
         <div className="w-20 h-20 rounded-3xl bg-rose-600 text-white flex items-center justify-center mb-6 shadow-xl shadow-rose-600/30 animate-pulse">
           <AlertTriangleIcon className="w-10 h-10" />
         </div>
-        <h1 className="text-3xl font-black text-pink-950 mb-4">
+        <h1 className="text-3xl font-black text-pink-950 mb-4 text-center">
           {alertSent === "sos" ? "SOS Police Dispatch Created" : "Unsafe Alert Broadcasted"}
         </h1>
         <div className="w-full max-w-md glass-card p-6 mb-6">
@@ -177,6 +182,14 @@ function LiveRideContent() {
             <li className="flex items-center gap-3"><CheckCircleIcon className="w-5 h-5 text-emerald-600"/> Real-time GPS tracking stream active</li>
           </ul>
         </div>
+        <a
+          href={`https://wa.me/?text=${whatsappMessage}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold shadow-lg mb-4 flex items-center gap-2"
+        >
+          <span>Share Alert via WhatsApp</span>
+        </a>
         <Link href="/" className="px-6 py-3 bg-pink-950 text-white rounded-xl text-sm font-bold">
           Back to Home
         </Link>
@@ -185,14 +198,14 @@ function LiveRideContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern flex flex-col pb-12">
+    <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern flex flex-col pb-12 text-pink-950">
       {/* SIMULATED FAKE CALL OVERLAY */}
       {fakeCall && (
         <div className="fixed inset-0 z-50 bg-black/90 text-white flex flex-col items-center justify-between p-12">
           <div className="text-center mt-12">
-            <p className="text-xs uppercase tracking-widest text-pink-400 font-bold mb-2">Incoming GuardHer Call</p>
+            <p className="text-xs uppercase tracking-widest text-pink-400 font-bold mb-2">Incoming GuardHer Protection Call</p>
             <p className="text-3xl font-black">Abbu (Father)</p>
-            <p className="text-sm text-gray-400 mt-1">Calling to check your ride location...</p>
+            <p className="text-sm text-gray-400 mt-1">Checking live route &amp; vehicle location...</p>
           </div>
           <div className="w-24 h-24 rounded-full bg-pink-600/30 border-2 border-pink-500 animate-ping flex items-center justify-center">
             <PhoneCallIcon className="w-10 h-10 text-pink-400" />
@@ -242,26 +255,39 @@ function LiveRideContent() {
         <div className="flex items-center gap-3">
           <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-sm font-extrabold text-pink-950">Active Protection Lock</span>
-          <span className="text-xs font-mono font-bold bg-pink-100 text-pink-800 px-2 py-0.5 rounded-md">{elapsedTime}</span>
+          <span className="text-xs font-mono font-bold bg-pink-100 text-pink-800 px-2.5 py-0.5 rounded-md">{elapsedTime}</span>
         </div>
         <button onClick={endRide} className="text-xs font-extrabold text-pink-600 hover:text-pink-900 uppercase tracking-wider px-3 py-1.5 rounded-lg bg-pink-50">
           End Session
         </button>
       </div>
 
-      {/* VEHICLE TELEMETRY CARD */}
+      {/* REAL-TIME INTERACTIVE MAP SHOWCASE */}
       <div className="max-w-xl mx-auto w-full px-6 pt-6">
-        <div className="glass-card p-6 shadow-lg border border-pink-200">
-          <div className="flex items-center justify-between border-b border-pink-100 pb-4 mb-4">
+        <InteractiveMap
+          lat={currentLat}
+          lng={currentLng}
+          pickup={session.ride.pickup}
+          destination={session.ride.destination}
+          vehiclePlate={session.ride.numberPlate}
+          driverName={session.ride.driverName}
+          status={alertSent === "sos" ? "sos" : "active"}
+        />
+      </div>
+
+      {/* VEHICLE TELEMETRY CARD */}
+      <div className="max-w-xl mx-auto w-full px-6 pt-4">
+        <div className="glass-card p-5 shadow-lg border border-pink-200">
+          <div className="flex items-center justify-between border-b border-pink-100 pb-3 mb-3">
             <div>
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-pink-600">{session.ride.platform} Ride</span>
-              <h3 className="text-lg font-black text-pink-950">{session.ride.vehicleModel}</h3>
+              <h3 className="text-base font-black text-pink-950">{session.ride.vehicleModel}</h3>
             </div>
-            <span className="font-mono text-sm font-black text-pink-600 bg-pink-100 px-3 py-1 rounded-xl">
+            <span className="font-mono text-xs font-black text-pink-600 bg-pink-100 px-3 py-1 rounded-xl">
               {session.ride.numberPlate}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-pink-800">
+          <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-pink-800">
             <div><span className="text-pink-400">Driver:</span> {session.ride.driverName}</div>
             <div><span className="text-pink-400">Speed:</span> {speed} km/h</div>
             <div className="col-span-2 truncate"><span className="text-pink-400">Route:</span> {session.ride.pickup} → {session.ride.destination}</div>
@@ -270,65 +296,64 @@ function LiveRideContent() {
       </div>
 
       {/* MAIN PANIC ACTION CENTER */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-xl mx-auto w-full gap-5">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 max-w-xl mx-auto w-full gap-4">
         <button
           onClick={() => setShowConfirm("unsafe")}
-          className="w-full p-6 glass-card border-2 border-amber-400 hover:border-amber-500 shadow-md transition-all flex items-center gap-4 text-left group"
+          className="w-full p-5 glass-card border-2 border-amber-400 hover:border-amber-500 shadow-md transition-all flex items-center gap-4 text-left group"
         >
-          <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30 group-hover:scale-105 transition-transform">
-            <AlertTriangleIcon className="w-7 h-7" />
+          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30 group-hover:scale-105 transition-transform">
+            <AlertTriangleIcon className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-lg font-black text-pink-950 block">I Feel Unsafe</span>
-            <span className="text-xs text-pink-700 font-medium">Route deviation or suspicious behavior. Silent alert to guardians.</span>
+            <span className="text-base font-black text-pink-950 block">I Feel Unsafe</span>
+            <span className="text-xs text-pink-700 font-medium">Route deviation or discomfort. Silent alert to guardians.</span>
           </div>
         </button>
 
         <button
           onClick={() => setShowConfirm("sos")}
-          className="w-full p-8 rounded-3xl bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 text-white shadow-2xl shadow-rose-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-6 text-left group"
+          className="w-full p-6 rounded-3xl bg-gradient-to-r from-rose-600 via-pink-600 to-rose-700 text-white shadow-2xl shadow-rose-600/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-5 text-left group"
         >
-          <div className="w-16 h-16 rounded-2xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
-            <AlertTriangleIcon className="w-9 h-9" />
+          <div className="w-14 h-14 rounded-2xl bg-white text-rose-600 flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
+            <AlertTriangleIcon className="w-8 h-8" />
           </div>
           <div>
-            <span className="text-3xl font-black tracking-wider block">1-TAP SOS</span>
-            <span className="text-xs text-pink-100 font-medium">Immediate danger. Dispatches 15 Police & all emergency contacts.</span>
+            <span className="text-2xl font-black tracking-wider block">1-TAP SOS</span>
+            <span className="text-xs text-pink-100 font-medium">Immediate danger. Dispatches 15 Police &amp; guardians.</span>
           </div>
         </button>
 
         {/* EXTRA SAFETY TOOLS */}
-        <div className="grid grid-cols-2 gap-4 w-full pt-2">
+        <div className="grid grid-cols-3 gap-3 w-full">
           <button
             onClick={() => setFakeCall(true)}
-            className="p-4 glass-card text-center hover:bg-white transition-all flex flex-col items-center gap-2"
+            className="p-3.5 glass-card text-center hover:bg-white transition-all flex flex-col items-center gap-1.5"
           >
-            <PhoneCallIcon className="w-6 h-6 text-pink-600" />
-            <span className="text-xs font-extrabold text-pink-950">Trigger Fake Call</span>
+            <PhoneCallIcon className="w-5 h-5 text-pink-600" />
+            <span className="text-[11px] font-extrabold text-pink-950">Fake Call</span>
           </button>
 
           <button
             onClick={() => setRecording(!recording)}
-            className={`p-4 glass-card text-center transition-all flex flex-col items-center gap-2 ${
+            className={`p-3.5 glass-card text-center transition-all flex flex-col items-center gap-1.5 ${
               recording ? "bg-rose-50 border-rose-400" : ""
             }`}
           >
-            <MicIcon className={`w-6 h-6 ${recording ? "text-rose-600 animate-pulse" : "text-pink-600"}`} />
-            <span className="text-xs font-extrabold text-pink-950">
-              {recording ? "Recording Audio..." : "Silent Audio Rec"}
+            <MicIcon className={`w-5 h-5 ${recording ? "text-rose-600 animate-pulse" : "text-pink-600"}`} />
+            <span className="text-[11px] font-extrabold text-pink-950">
+              {recording ? "Recording..." : "Silent Rec"}
             </span>
           </button>
-        </div>
-      </div>
 
-      {/* FOOTER GPS STATUS */}
-      <div className="max-w-xl mx-auto w-full px-6">
-        <div className="glass-card px-6 py-3 flex items-center justify-between text-xs font-semibold text-pink-800">
-          <div className="flex items-center gap-2">
-            <NavigationIcon className="w-4 h-4 text-pink-600" />
-            <span className="font-mono">Lat: {currentLat.toFixed(4)}, Lng: {currentLng.toFixed(4)}</span>
-          </div>
-          <span className="text-emerald-600 font-bold">100% GPS Lock</span>
+          <a
+            href={`https://wa.me/?text=${whatsappMessage}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-3.5 glass-card text-center hover:bg-emerald-50 transition-all flex flex-col items-center gap-1.5 text-emerald-700"
+          >
+            <span className="text-base font-bold">💬</span>
+            <span className="text-[11px] font-extrabold">WhatsApp</span>
+          </a>
         </div>
       </div>
     </div>
