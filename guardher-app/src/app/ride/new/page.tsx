@@ -5,15 +5,37 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { RidePlatform, Relationship } from "@/lib/types";
 
-// Replacing "Other" with "Bykea" and making it specific
-const platforms: RidePlatform[] = ["Yango", "Uber", "InDrive", "Careem", "Bykea" as any, "Other"];
+const platforms: { name: RidePlatform; color: string }[] = [
+  { name: "InDrive", color: "from-green-500 to-emerald-600" },
+  { name: "Yango", color: "from-red-500 to-rose-600" },
+  { name: "Bykea" as any, color: "from-amber-500 to-yellow-600" },
+  { name: "Careem", color: "from-teal-500 to-emerald-600" },
+  { name: "Uber", color: "from-gray-800 to-black" },
+  { name: "Other", color: "from-pink-500 to-purple-600" },
+];
+
 const relationships: Relationship[] = ["Parent", "Brother", "Sister", "Husband", "Friend", "Guardian", "Other"];
 
-/* ===== ICONS ===== */
 function ShieldIcon({ className = "" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+    </svg>
+  );
+}
+
+function SparklesIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
     </svg>
   );
 }
@@ -22,8 +44,10 @@ export default function NewRidePage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<string | null>(null);
 
-  // Form State (Empty by default)
+  // Form State
   const [platform, setPlatform] = useState<RidePlatform>("InDrive");
   const [driverName, setDriverName] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
@@ -33,15 +57,15 @@ export default function NewRidePage() {
 
   // Contacts
   const [contacts, setContacts] = useState([
-    { id: "tc-001", name: "Father", phone: "0300-0000000", relationship: "Parent" as Relationship, selected: false },
-    { id: "tc-002", name: "Brother", phone: "0321-0000000", relationship: "Brother" as Relationship, selected: false },
+    { id: "tc-001", name: "Ammi (Mother)", phone: "0300-9876543", relationship: "Parent" as Relationship, selected: true },
+    { id: "tc-002", name: "Tariq (Brother)", phone: "0321-4567890", relationship: "Brother" as Relationship, selected: true },
+    { id: "tc-003", name: "Zainab (Friend)", phone: "0333-1122334", relationship: "Friend" as Relationship, selected: false },
   ]);
-  
+
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
   const [newContactRel, setNewContactRel] = useState<Relationship>("Friend");
 
-  // Check for active session on load
   useEffect(() => {
     fetch("/api/sessions?active=true")
       .then((res) => res.json())
@@ -49,8 +73,23 @@ export default function NewRidePage() {
         if (data.session) {
           router.push(`/ride/live?sessionId=${data.session.id}`);
         }
-      });
+      })
+      .catch(() => {});
   }, [router]);
+
+  const handleQuickScan = () => {
+    setScanning(true);
+    setScanResult(null);
+    setTimeout(() => {
+      setDriverName("Muhammad Usman");
+      setVehicleModel("Suzuki Alto (White)");
+      setNumberPlate("LEC-8921");
+      setPickup("DHA Phase 5, Lahore");
+      setDestination("Johar Town Block G, Lahore");
+      setScanning(false);
+      setScanResult("✨ AI Safety Scanner Auto-Filled Ride Data!");
+    }, 1200);
+  };
 
   const toggleContact = (id: string) => {
     setContacts((prev) =>
@@ -100,100 +139,176 @@ export default function NewRidePage() {
   const canProceedStep2 = contacts.some((c) => c.selected);
 
   return (
-    <div className="min-h-screen bg-guardher-bg pb-20">
-      {/* Nav */}
-      <nav className="border-b border-guardher-border bg-white sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <ShieldIcon className="w-5 h-5 text-guardher-primary" />
-            <span className="text-lg font-bold text-guardher-text tracking-tight">GuardHer</span>
+    <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern pb-24 text-pink-950">
+      {/* ===== NAVBAR ===== */}
+      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 border-b border-pink-100 shadow-sm">
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="GuardHer Logo" className="w-8 h-8 rounded-lg object-cover border border-pink-200" />
+            <span className="text-xl font-extrabold text-gradient-pink">GuardHer</span>
           </Link>
-          <span className="text-sm font-medium text-guardher-text-muted">Setup Session</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-pink-700 bg-pink-100 px-3 py-1 rounded-full">
+            Preload Ride Intelligence
+          </span>
         </div>
       </nav>
 
-      <div className="pt-10 px-6 max-w-xl mx-auto">
-        {/* Progress */}
-        <div className="flex items-center justify-between mb-8">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex flex-col items-center gap-2">
+      <div className="pt-10 px-6 max-w-2xl mx-auto">
+        {/* STEP PROGRESS BAR */}
+        <div className="flex items-center justify-between mb-10 px-4">
+          {[
+            { num: 1, label: "Ride Intelligence" },
+            { num: 2, label: "Guardian Sync" },
+            { num: 3, label: "Activate Protection" },
+          ].map((s) => (
+            <div key={s.num} className="flex flex-col items-center gap-2">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step >= s
-                    ? "bg-guardher-primary text-white"
-                    : "bg-guardher-surface-alt text-guardher-text-muted border border-guardher-border"
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-extrabold transition-all shadow-sm ${
+                  step >= s.num
+                    ? "bg-gradient-to-tr from-pink-500 to-rose-600 text-white shadow-pink-500/30 scale-105"
+                    : "bg-white text-pink-400 border border-pink-200"
                 }`}
               >
-                {step > s ? "✓" : s}
+                {step > s.num ? "✓" : s.num}
               </div>
+              <span className={`text-[11px] font-bold ${step >= s.num ? "text-pink-950" : "text-pink-400"}`}>
+                {s.label}
+              </span>
             </div>
           ))}
         </div>
 
         {/* STEP 1: RIDE DETAILS */}
         {step === 1 && (
-          <div className="card p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-guardher-text mb-2">Ride Information</h1>
-            <p className="text-sm text-guardher-text-muted mb-6">
-              Enter the vehicle and driver details from your ride-hailing app.
-            </p>
+          <div className="glass-card p-8 sm:p-10 shadow-2xl border border-pink-200 relative overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-2xl font-black text-pink-950 tracking-tight">Preload Ride Details</h1>
+                <p className="text-xs text-pink-700 font-medium mt-1">
+                  Input driver & vehicle info before entering the vehicle for zero-typing panic dispatch.
+                </p>
+              </div>
+              <button
+                onClick={handleQuickScan}
+                disabled={scanning}
+                className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl text-xs font-extrabold shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+              >
+                <SparklesIcon className="w-4 h-4" />
+                {scanning ? "Scanning..." : "Demo Auto-Fill"}
+              </button>
+            </div>
 
-            <label className="block text-xs font-semibold text-guardher-text-muted uppercase tracking-wider mb-2">
-              Platform
+            {scanResult && (
+              <div className="mb-6 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
+                {scanResult}
+              </div>
+            )}
+
+            <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-2">
+              Select Ride-Hailing Platform
             </label>
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-6">
               {platforms.map((p) => (
                 <button
-                  key={p}
-                  onClick={() => setPlatform(p)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium border transition-colors ${
-                    platform === p
-                      ? "bg-guardher-primary border-guardher-primary text-white"
-                      : "bg-white border-guardher-border text-guardher-text hover:bg-guardher-surface-alt"
+                  key={p.name}
+                  onClick={() => setPlatform(p.name)}
+                  className={`py-2.5 rounded-xl text-xs font-extrabold border transition-all ${
+                    platform === p.name
+                      ? "bg-gradient-to-r from-pink-500 to-rose-600 border-transparent text-white shadow-md shadow-pink-500/20 scale-105"
+                      : "bg-white border-pink-200 text-pink-950 hover:bg-pink-50"
                   }`}
                 >
-                  {p}
+                  {p.name}
                 </button>
               ))}
             </div>
 
             <div className="space-y-4">
-              {[
-                { label: "Driver Name", value: driverName, set: setDriverName, placeholder: "e.g. Asif Ali" },
-                { label: "Vehicle Make & Model", value: vehicleModel, set: setVehicleModel, placeholder: "e.g. Suzuki Alto White" },
-                { label: "Registration Plate", value: numberPlate, set: setNumberPlate, placeholder: "e.g. LEA-1234" },
-                { label: "Pickup Location", value: pickup, set: setPickup, placeholder: "e.g. DHA Phase 5" },
-                { label: "Destination", value: destination, set: setDestination, placeholder: "e.g. Gulberg III" },
-              ].map(({ label, value, set, placeholder }) => (
-                <div key={label}>
-                  <label className="block text-sm font-medium text-guardher-text mb-1.5">{label}</label>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-1">
+                  Driver Name
+                </label>
+                <input
+                  type="text"
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
+                  placeholder="e.g. Asif Ali"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-pink-200 text-pink-950 placeholder-pink-300 text-sm font-medium focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-1">
+                    Vehicle Model
+                  </label>
                   <input
                     type="text"
-                    value={value}
-                    onChange={(e) => set(e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full px-4 py-2.5 rounded-md bg-white border border-guardher-border-dark text-guardher-text placeholder:text-guardher-text-muted focus:outline-none focus:ring-2 focus:ring-guardher-primary/50 focus:border-guardher-primary transition-all sm:text-sm"
+                    value={vehicleModel}
+                    onChange={(e) => setVehicleModel(e.target.value)}
+                    placeholder="e.g. Suzuki Alto White"
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-pink-200 text-pink-950 placeholder-pink-300 text-sm font-medium focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
                   />
                 </div>
-              ))}
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-1">
+                    Registration Plate
+                  </label>
+                  <input
+                    type="text"
+                    value={numberPlate}
+                    onChange={(e) => setNumberPlate(e.target.value)}
+                    placeholder="e.g. LEA-1234"
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-pink-200 text-pink-950 placeholder-pink-300 text-sm font-medium uppercase font-mono focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-1">
+                  Pickup Location
+                </label>
+                <input
+                  type="text"
+                  value={pickup}
+                  onChange={(e) => setPickup(e.target.value)}
+                  placeholder="e.g. DHA Phase 5, Lahore"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-pink-200 text-pink-950 placeholder-pink-300 text-sm font-medium focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-1">
+                  Destination
+                </label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="e.g. Johar Town, Lahore"
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-pink-200 text-pink-950 placeholder-pink-300 text-sm font-medium focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all"
+                />
+              </div>
             </div>
 
             <button
               disabled={!canProceedStep1}
               onClick={() => setStep(2)}
-              className="mt-8 w-full py-3 rounded-md bg-guardher-primary text-white font-medium disabled:opacity-50 hover:bg-guardher-primary-hover transition-colors"
+              className="mt-8 w-full py-4 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-600 text-white font-extrabold text-base disabled:opacity-50 shadow-lg shadow-pink-500/30 hover:shadow-pink-500/50 hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
-              Continue to Contacts
+              Continue to Guardian Sync →
             </button>
           </div>
         )}
 
         {/* STEP 2: CONTACTS */}
         {step === 2 && (
-          <div className="card p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-guardher-text mb-2">Emergency Contacts</h1>
-            <p className="text-sm text-guardher-text-muted mb-6">
-              Select contacts to be notified with live tracking if an alert is triggered.
+          <div className="glass-card p-8 sm:p-10 shadow-2xl border border-pink-200">
+            <h1 className="text-2xl font-black text-pink-950 tracking-tight mb-2">Guardian Sync</h1>
+            <p className="text-xs text-pink-700 font-medium mb-6">
+              Select who will receive your continuous live tracking map via instant SMS link.
             </p>
 
             <div className="space-y-3 mb-6">
@@ -201,68 +316,70 @@ export default function NewRidePage() {
                 <button
                   key={c.id}
                   onClick={() => toggleContact(c.id)}
-                  className={`w-full flex items-center p-4 rounded-md border transition-colors ${
+                  className={`w-full flex items-center p-4 rounded-2xl border transition-all ${
                     c.selected
-                      ? "bg-guardher-primary/5 border-guardher-primary"
-                      : "bg-white border-guardher-border hover:bg-guardher-surface-alt"
+                      ? "bg-pink-100/60 border-pink-400 shadow-sm"
+                      : "bg-white border-pink-200 hover:bg-pink-50"
                   }`}
                 >
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center mr-4 ${c.selected ? "bg-guardher-primary border-guardher-primary text-white" : "border-guardher-border-dark"}`}>
-                    {c.selected && <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                  <div className={`w-6 h-6 rounded-lg border flex items-center justify-center mr-4 transition-all ${c.selected ? "bg-pink-600 border-pink-600 text-white" : "border-pink-300 bg-white"}`}>
+                    {c.selected && <CheckCircleIcon className="w-4 h-4" />}
                   </div>
                   <div className="text-left">
-                    <div className="text-sm font-medium text-guardher-text">{c.name}</div>
-                    <div className="text-xs text-guardher-text-muted">{c.phone} • {c.relationship}</div>
+                    <div className="text-sm font-extrabold text-pink-950">{c.name}</div>
+                    <div className="text-xs text-pink-700 font-semibold">{c.phone} • {c.relationship}</div>
                   </div>
                 </button>
               ))}
             </div>
 
-            <div className="border-t border-guardher-border pt-6 mb-6">
-              <label className="block text-xs font-semibold text-guardher-text-muted uppercase tracking-wider mb-3">
-                Add New Contact
+            <div className="border-t border-pink-200/80 pt-6 mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-3">
+                + Add Another Guardian
               </label>
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <input
                   type="text"
                   value={newContactName}
                   onChange={(e) => setNewContactName(e.target.value)}
-                  placeholder="Name"
-                  className="px-3 py-2 rounded-md border border-guardher-border-dark text-sm focus:ring-2 focus:ring-guardher-primary/50 outline-none"
+                  placeholder="Guardian Name"
+                  className="px-4 py-2.5 rounded-xl border border-pink-200 bg-white text-sm font-medium focus:ring-2 focus:ring-pink-500/20 outline-none"
                 />
                 <input
                   type="text"
                   value={newContactPhone}
                   onChange={(e) => setNewContactPhone(e.target.value)}
-                  placeholder="Phone (03XX...)"
-                  className="px-3 py-2 rounded-md border border-guardher-border-dark text-sm focus:ring-2 focus:ring-guardher-primary/50 outline-none"
+                  placeholder="03XX-XXXXXXX"
+                  className="px-4 py-2.5 rounded-xl border border-pink-200 bg-white text-sm font-medium focus:ring-2 focus:ring-pink-500/20 outline-none"
                 />
               </div>
               <div className="flex gap-3">
                 <select
                   value={newContactRel}
                   onChange={(e) => setNewContactRel(e.target.value as Relationship)}
-                  className="flex-1 px-3 py-2 rounded-md border border-guardher-border-dark text-sm bg-white focus:ring-2 focus:ring-guardher-primary/50 outline-none"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-pink-200 bg-white text-sm font-medium focus:ring-2 focus:ring-pink-500/20 outline-none"
                 >
                   {relationships.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <button
                   onClick={addContact}
-                  className="px-4 py-2 bg-guardher-surface-alt border border-guardher-border rounded-md text-sm font-medium hover:bg-gray-200"
+                  className="px-5 py-2.5 bg-pink-900 text-white rounded-xl text-sm font-extrabold hover:bg-pink-950 transition-colors"
                 >
-                  Add
+                  Add Contact
                 </button>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-8">
-              <button onClick={() => setStep(1)} className="px-6 py-3 border border-guardher-border-dark rounded-md font-medium text-guardher-text hover:bg-guardher-surface-alt">Back</button>
+            <div className="flex gap-4 mt-8">
+              <button onClick={() => setStep(1)} className="px-6 py-3.5 border border-pink-300 rounded-xl font-bold text-pink-950 hover:bg-pink-100/50">
+                Back
+              </button>
               <button
                 disabled={!canProceedStep2}
                 onClick={() => setStep(3)}
-                className="flex-1 py-3 bg-guardher-primary text-white rounded-md font-medium disabled:opacity-50 hover:bg-guardher-primary-hover"
+                className="flex-1 py-3.5 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-600 text-white rounded-xl font-extrabold disabled:opacity-50 shadow-lg shadow-pink-500/30 hover:scale-[1.01]"
               >
-                Review Session
+                Review Protection →
               </button>
             </div>
           </div>
@@ -270,43 +387,48 @@ export default function NewRidePage() {
 
         {/* STEP 3: REVIEW */}
         {step === 3 && (
-          <div className="card p-6 sm:p-8">
-            <h1 className="text-2xl font-bold text-guardher-text mb-6">Review &amp; Start</h1>
+          <div className="glass-card p-8 sm:p-10 shadow-2xl border border-pink-200">
+            <h1 className="text-2xl font-black text-pink-950 tracking-tight mb-6">Review &amp; Activate</h1>
 
-            <div className="border border-guardher-border rounded-md overflow-hidden mb-6">
-              <div className="bg-guardher-surface-alt px-4 py-2 border-b border-guardher-border">
-                <span className="text-xs font-semibold text-guardher-text-muted uppercase">Ride Information</span>
+            <div className="rounded-2xl border border-pink-200 bg-white overflow-hidden mb-6 shadow-sm">
+              <div className="bg-pink-100/70 px-5 py-3 border-b border-pink-200 font-extrabold text-xs uppercase tracking-wider text-pink-900">
+                Ride Intelligence Summary
               </div>
-              <div className="p-4 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-guardher-text-muted">Platform</span><span className="font-medium">{platform}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-guardher-text-muted">Driver</span><span className="font-medium">{driverName}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-guardher-text-muted">Vehicle</span><span className="font-medium">{vehicleModel}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-guardher-text-muted">Plate</span><span className="font-medium">{numberPlate}</span></div>
+              <div className="p-5 space-y-3 text-sm">
+                <div className="flex justify-between"><span className="text-pink-700 font-semibold">Service</span><span className="font-bold text-pink-950">{platform}</span></div>
+                <div className="flex justify-between"><span className="text-pink-700 font-semibold">Driver</span><span className="font-bold text-pink-950">{driverName}</span></div>
+                <div className="flex justify-between"><span className="text-pink-700 font-semibold">Vehicle</span><span className="font-bold text-pink-950">{vehicleModel}</span></div>
+                <div className="flex justify-between"><span className="text-pink-700 font-semibold">Plate</span><span className="font-bold text-pink-600 font-mono bg-pink-50 px-2 py-0.5 rounded">{numberPlate}</span></div>
+                <div className="flex justify-between"><span className="text-pink-700 font-semibold">Route</span><span className="font-bold text-pink-950">{pickup} → {destination}</span></div>
               </div>
             </div>
 
-            <div className="border border-guardher-border rounded-md overflow-hidden mb-8">
-              <div className="bg-guardher-surface-alt px-4 py-2 border-b border-guardher-border">
-                <span className="text-xs font-semibold text-guardher-text-muted uppercase">Selected Contacts</span>
+            <div className="rounded-2xl border border-pink-200 bg-white overflow-hidden mb-8 shadow-sm">
+              <div className="bg-pink-100/70 px-5 py-3 border-b border-pink-200 font-extrabold text-xs uppercase tracking-wider text-pink-900">
+                Notified Guardians ({contacts.filter(c => c.selected).length})
               </div>
-              <div className="p-4 space-y-2">
+              <div className="p-5 space-y-2">
                 {contacts.filter(c => c.selected).map(c => (
-                  <div key={c.id} className="text-sm">
-                    <span className="font-medium">{c.name}</span> <span className="text-guardher-text-muted">({c.phone})</span>
+                  <div key={c.id} className="text-sm flex items-center gap-2">
+                    <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
+                    <span className="font-bold text-pink-950">{c.name}</span>
+                    <span className="text-xs text-pink-700 font-medium">({c.phone})</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => setStep(2)} className="px-6 py-3 border border-guardher-border-dark rounded-md font-medium text-guardher-text hover:bg-guardher-surface-alt">Back</button>
+            <div className="flex gap-4">
+              <button onClick={() => setStep(2)} className="px-6 py-3.5 border border-pink-300 rounded-xl font-bold text-pink-950 hover:bg-pink-100/50">
+                Back
+              </button>
               <button
                 onClick={startSafeRide}
                 disabled={loading}
-                className="flex-1 py-3 bg-guardher-primary text-white rounded-md font-medium hover:bg-guardher-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-4 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-600 text-white rounded-xl font-black text-base shadow-xl shadow-pink-500/40 hover:scale-[1.01] flex items-center justify-center gap-2"
               >
-                <ShieldIcon className="w-5 h-5" />
-                {loading ? "Starting..." : "Start Safe Session"}
+                <ShieldIcon className="w-6 h-6" />
+                {loading ? "Activating GuardHer..." : "Activate Safe Session Now"}
               </button>
             </div>
           </div>
