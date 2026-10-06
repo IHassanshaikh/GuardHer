@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getSessions,
+  getSession,
   getActiveSession,
   createSession,
   updateSession,
@@ -11,8 +12,13 @@ import {
 } from "@/lib/store";
 import type { RideSession, RideDetails } from "@/lib/types";
 
-// GET /api/sessions — list all sessions OR get active session
+// GET /api/sessions — list all sessions, get by id, OR get active session
 export async function GET(req: NextRequest) {
+  const id = req.nextUrl.searchParams.get("id");
+  if (id) {
+    const session = getSession(id);
+    return NextResponse.json({ session: session ?? null });
+  }
   const active = req.nextUrl.searchParams.get("active");
   if (active === "true") {
     const session = getActiveSession();
@@ -54,9 +60,10 @@ export async function POST(req: NextRequest) {
 
   // ===== REAL SMS INTEGRATION =====
   // Only runs if TWILIO_ACCOUNT_SID is provided in .env
-  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER } = process.env;
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, NEXT_PUBLIC_BASE_URL } = process.env;
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_PHONE_NUMBER) {
-    const trackingLink = `http://localhost:3000/contact-view`; 
+    const baseUrl = NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const trackingLink = `${baseUrl}/contact-view`; 
     const msgBody = `GuardHer Alert: ${user.name} has started a ride in a ${ride.vehicleModel} (${ride.numberPlate}). Track live: ${trackingLink}`;
     
     for (const contact of session.trustedContacts) {

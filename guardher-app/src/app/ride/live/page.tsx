@@ -93,11 +93,20 @@ function LiveRideContent() {
 
   // Fetch session
   useEffect(() => {
-    if (!sessionId) return;
-    fetch(`/api/sessions?active=true`)
+    const url = sessionId ? `/api/sessions?id=${sessionId}` : `/api/sessions?active=true`;
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
-        if (d.session) setSession(d.session);
+        if (d.session) {
+          setSession(d.session);
+        } else if (sessionId) {
+          // fallback to active session
+          fetch(`/api/sessions?active=true`)
+            .then((r2) => r2.json())
+            .then((d2) => {
+              if (d2.session) setSession(d2.session);
+            });
+        }
       })
       .catch(() => {});
   }, [sessionId]);

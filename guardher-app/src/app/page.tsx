@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { IncidentCase } from "@/lib/types";
 
 /* ===== ICONS ===== */
 function ShieldIcon({ className = "" }: { className?: string }) {
@@ -80,9 +81,21 @@ function ChevronRightIcon({ className = "" }: { className?: string }) {
   );
 }
 
+interface StatsData {
+  totalSessions: number;
+  activeSessions: number;
+  totalIncidents: number;
+  pendingIncidents: number;
+  totalProtectedWomen: number;
+  avgDispatchTimeSec: number;
+  citiesCovered: number;
+}
+
 export default function HomePage() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [stats, setStats] = useState<StatsData | null>(null);
+  const [latestIncident, setLatestIncident] = useState<IncidentCase | null>(null);
 
   useEffect(() => {
     fetch("/api/sessions?active=true")
@@ -90,6 +103,24 @@ export default function HomePage() {
       .then((data) => {
         if (data.session) {
           setActiveSessionId(data.session.id);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/stats")
+      .then((res) => res.json())
+      .then((data: StatsData) => {
+        if (data && typeof data.totalProtectedWomen === "number") {
+          setStats(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/incidents")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.incidents && data.incidents.length > 0) {
+          setLatestIncident(data.incidents[0]);
         }
       })
       .catch(() => {});
@@ -270,19 +301,29 @@ export default function HomePage() {
       <section className="py-10 bg-gradient-to-r from-pink-600 via-rose-600 to-fuchsia-700 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div>
-            <p className="text-3xl sm:text-4xl font-black">12,000+</p>
+            <p className="text-3xl sm:text-4xl font-black">
+              {stats ? `${stats.totalProtectedWomen.toLocaleString()}+` : "12,450+"}
+            </p>
             <p className="text-xs font-bold uppercase tracking-wider text-pink-200 mt-1">Pakistani Women Protected</p>
           </div>
           <div>
-            <p className="text-3xl sm:text-4xl font-black">&lt; 3 Sec</p>
+            <p className="text-3xl sm:text-4xl font-black">
+              {stats ? `< ${stats.avgDispatchTimeSec}s` : "< 3 Sec"}
+            </p>
             <p className="text-xs font-bold uppercase tracking-wider text-pink-200 mt-1">Emergency Dispatch Time</p>
           </div>
           <div>
-            <p className="text-3xl sm:text-4xl font-black">100%</p>
-            <p className="text-xs font-bold uppercase tracking-wider text-pink-200 mt-1">Free for All Women</p>
+            <p className="text-3xl sm:text-4xl font-black">
+              {stats ? `${stats.activeSessions} Active` : "100%"}
+            </p>
+            <p className="text-xs font-bold uppercase tracking-wider text-pink-200 mt-1">
+              {stats ? "Live Monitored Trips" : "Free for All Women"}
+            </p>
           </div>
           <div>
-            <p className="text-3xl sm:text-4xl font-black">10+ Cities</p>
+            <p className="text-3xl sm:text-4xl font-black">
+              {stats ? `${stats.citiesCovered}+ Cities` : "12+ Cities"}
+            </p>
             <p className="text-xs font-bold uppercase tracking-wider text-pink-200 mt-1">Coverage Across Pakistan</p>
           </div>
         </div>
@@ -461,48 +502,65 @@ export default function HomePage() {
       <section className="py-20 px-6 bg-pink-950 text-white relative overflow-hidden">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-xs font-extrabold uppercase tracking-widest text-pink-400 bg-pink-900/50 border border-pink-700/50 px-4 py-1.5 rounded-full">
-              Live System Telemetry
+            <span className="text-xs font-extrabold uppercase tracking-widest text-pink-400 bg-pink-900/50 border border-pink-700/50 px-4 py-1.5 rounded-full inline-flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              Live Backend Telemetry Feed
             </span>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight mt-4">
               The Emergency Intelligence Packet
             </h2>
             <p className="text-sm text-pink-300 mt-2 font-medium">
-              This is the exact high-priority data packet dispatched to police and guardians when SOS is pressed.
+              This is the live high-priority data packet dispatched to police and guardians from the GuardHer engine.
             </p>
           </div>
 
-          <div className="glass-card-dark overflow-hidden text-white">
+          <div className="glass-card-dark overflow-hidden text-white border border-pink-500/30">
             <div className="bg-gradient-to-r from-rose-600 to-pink-600 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangleIcon className="w-5 h-5 text-white animate-pulse" />
-                <span className="font-bold text-sm tracking-wide">HIGH-PRIORITY SOS DISPATCH</span>
+                <span className="font-bold text-sm tracking-wide">
+                  {latestIncident?.alertLevel === "unsafe"
+                    ? "UNSAFE TRIP DETOUR WARNING"
+                    : "HIGH-PRIORITY SOS DISPATCH"}
+                </span>
               </div>
               <span className="px-2.5 py-1 bg-white/20 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-white">
-                LIVE DISPATCH ACTIVE
+                {latestIncident ? `INCIDENT: ${latestIncident.resolution.toUpperCase()}` : "LIVE DISPATCH ACTIVE"}
               </span>
             </div>
 
             <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
               <div className="border-b sm:border-b-0 border-pink-900/50 pb-4 sm:pb-0">
                 <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Passenger Identifier</p>
-                <p className="font-semibold text-lg text-white mt-1">Zainab R. (Verified User)</p>
+                <p className="font-semibold text-lg text-white mt-1">
+                  {latestIncident ? `Passenger ID: ${latestIncident.session.userId}` : "Zainab R. (Verified User)"}
+                </p>
               </div>
 
               <div className="border-b sm:border-b-0 border-pink-900/50 pb-4 sm:pb-0">
-                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Ride Provider</p>
-                <p className="font-semibold text-lg text-white mt-1">InDrive Pakistan</p>
+                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Ride Provider & Driver</p>
+                <p className="font-semibold text-lg text-white mt-1">
+                  {latestIncident
+                    ? `${latestIncident.session.ride.platform} (${latestIncident.session.ride.driverName})`
+                    : "InDrive Pakistan (Kashif M.)"}
+                </p>
               </div>
 
               <div className="border-b sm:border-b-0 border-pink-900/50 pb-4 sm:pb-0">
                 <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Vehicle Reg. Plate & Model</p>
-                <p className="font-semibold text-lg text-pink-300 mt-1">LEC-9842 — White Suzuki Alto</p>
+                <p className="font-semibold text-lg text-pink-300 mt-1">
+                  {latestIncident
+                    ? `${latestIncident.session.ride.numberPlate} — ${latestIncident.session.ride.vehicleModel}`
+                    : "LEC-9842 — White Suzuki Alto"}
+                </p>
               </div>
 
               <div>
-                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Live GPS Coordinates</p>
+                <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">Live GPS Coordinates & Telemetry</p>
                 <p className="font-mono text-xs font-bold text-emerald-400 mt-1 bg-black/40 p-2 rounded-lg border border-emerald-500/30">
-                  Lat: 31.4704° N, Lng: 74.4098° E (Johar Town, Lahore)
+                  {latestIncident && latestIncident.session.currentLocation
+                    ? `Lat: ${latestIncident.session.currentLocation.lat.toFixed(4)}° N, Lng: ${latestIncident.session.currentLocation.lng.toFixed(4)}° E (${latestIncident.session.currentLocation.speed ? `${latestIncident.session.currentLocation.speed} km/h` : "Moving"})`
+                    : "Lat: 31.4704° N, Lng: 74.4098° E (Johar Town, Lahore)"}
                 </p>
               </div>
             </div>
@@ -510,9 +568,19 @@ export default function HomePage() {
             <div className="bg-pink-900/40 px-8 py-5 border-t border-pink-900/60 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 text-xs font-semibold text-pink-200">
                 <CheckCircleIcon className="w-4 h-4 text-emerald-400" />
-                <span>Dispatched to 15 Madadgar Police Center + 3 Primary Guardian SMS Links</span>
+                <span>
+                  {latestIncident
+                    ? `Notified ${latestIncident.session.trustedContacts.length} trusted contacts + 15 Police Sync`
+                    : "Dispatched to 15 Madadgar Police Center + 3 Primary Guardian SMS Links"}
+                </span>
               </div>
-              <span className="text-[11px] font-mono text-pink-400">Timestamp: {new Date().toLocaleTimeString()} PKT</span>
+              <span className="text-[11px] font-mono text-pink-400">
+                Timestamp:{" "}
+                {latestIncident
+                  ? new Date(latestIncident.triggerTime).toLocaleTimeString()
+                  : new Date().toLocaleTimeString()}{" "}
+                PKT
+              </span>
             </div>
           </div>
         </div>
