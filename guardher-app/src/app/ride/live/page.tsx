@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { RideSession, AlertLevel } from "@/lib/types";
 import InteractiveMap from "@/components/InteractiveMap";
+import { playRingTone, playEmergencySiren } from "@/lib/sound";
 
 function ShieldIcon({ className = "" }: { className?: string }) {
   return (
@@ -48,6 +49,14 @@ function MicIcon({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+function Volume2Icon({ className = "" }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    </svg>
+  );
+}
 
 function LiveRideContent() {
   const searchParams = useSearchParams();
@@ -59,13 +68,30 @@ function LiveRideContent() {
   const [showConfirm, setShowConfirm] = useState<AlertLevel | null>(null);
   const [sending, setSending] = useState(false);
   const [rideEnded, setRideEnded] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [fakeCall, setFakeCall] = useState(false);
 
+  // REAL AUDIO EVIDENCE RECORDING
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // REAL SOUND SYNTHESIS
+  const [fakeCall, setFakeCall] = useState(false);
+  const [sirenActive, setSirenActive] = useState(false);
+  const stopRingRef = useRef<(() => void) | null>(null);
+  const stopSirenRef = useRef<(() => void) | null>(null);
+
+  // VOICE KEYPHRASE TRIGGER STATUS
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [detectedPhrase, setDetectedPhrase] = useState<string | null>(null);
+
+  // GPS TELEMETRY
   const [currentLat, setCurrentLat] = useState(31.4704);
   const [currentLng, setCurrentLng] = useState(74.4098);
   const [speed, setSpeed] = useState(36);
+  const [isRealGps, setIsRealGps] = useState(false);
 
+  // Fetch session
   useEffect(() => {
     if (!sessionId) return;
     fetch(`/api/sessions?active=true`)
@@ -76,6 +102,26 @@ function LiveRideContent() {
       .catch(() => {});
   }, [sessionId]);
 
+  // Real Geolocation watch
+  useEffect(() => {
+    if (typeof window !== "undefined" && "geolocation" in navigator) {
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setCurrentLat(pos.coords.latitude);
+          setCurrentLng(pos.coords.longitude);
+          if (pos.coords.speed) setSpeed(Math.round(pos.coords.speed * 3.6));
+          setIsRealGps(true);
+        },
+        (err) => {
+          console.log("GPS falling back to simulated Lahore coordinates:", err.message);
+        },
+        { enableHighAccuracy: true }
+      );
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
+  }, []);
+
+  // Timer
   useEffect(() => {
     if (!session || rideEnded) return;
     const interval = setInterval(() => {
@@ -87,12 +133,15 @@ function LiveRideContent() {
     return () => clearInterval(interval);
   }, [session, rideEnded]);
 
+  // Periodic Telemetry sync
   useEffect(() => {
     if (!session || rideEnded) return;
     const interval = setInterval(() => {
-      setCurrentLat((p) => p + (Math.random() - 0.4) * 0.0005);
-      setCurrentLng((p) => p + (Math.random() - 0.3) * 0.0005);
-      setSpeed(Math.floor(30 + Math.random() * 15));
+      if (!isRealGps) {
+        setCurrentLat((p) => p + (Math.random() - 0.4) * 0.0005);
+        setCurrentLng((p) => p + (Math.random() - 0.3) * 0.0005);
+        setSpeed(Math.floor(30 + Math.random() * 15));
+      }
 
       if (sessionId) {
         fetch("/api/location", {
@@ -103,7 +152,104 @@ function LiveRideContent() {
       }
     }, 3000);
     return () => clearInterval(interval);
-  }, [session, sessionId, rideEnded, currentLat, currentLng, speed]);
+  }, [session, sessionId, rideEnded, currentLat, currentLng, speed, isRealGps]);
+
+  // Real Web Speech API keyphrase recognition
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = "en-US";
+
+        recognition.onstart = () => setVoiceListening(true);
+        recognition.onend = () => {
+          if (!rideEnded) {
+            try { recognition.start(); } catch (e) {}
+          }
+        };
+
+        recognition.onresult = (event: any) => {
+          const last = event.results.length - 1;
+          const transcript = event.results[last][0].transcript.toLowerCase();
+          if (transcript.includes("help") || transcript.includes("sos") || transcript.includes("emergency") || transcript.includes("bachao")) {
+            setDetectedPhrase(transcript);
+            triggerAlert("sos");
+          }
+        };
+
+        try {
+          recognition.start();
+        } catch (e) {}
+
+        return () => {
+          try { recognition.stop(); } catch (e) {}
+        };
+      }
+    }
+  }, [rideEnded]);
+
+  // REAL FAKE CALL WITH SYNTHESIZED RINGTONE
+  const handleStartFakeCall = () => {
+    setFakeCall(true);
+    stopRingRef.current = playRingTone();
+  };
+
+  const handleStopFakeCall = () => {
+    if (stopRingRef.current) {
+      stopRingRef.current();
+      stopRingRef.current = null;
+    }
+    setFakeCall(false);
+  };
+
+  // REAL EMERGENCY SIREN SYNTHESIZER
+  const toggleSiren = () => {
+    if (sirenActive) {
+      if (stopSirenRef.current) stopSirenRef.current();
+      setSirenActive(false);
+    } else {
+      stopSirenRef.current = playEmergencySiren();
+      setSirenActive(true);
+    }
+  };
+
+  // REAL AMBIENT AUDIO RECORDER
+  const handleToggleRecordAudio = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          setRecordedAudioUrl(audioUrl);
+          stream.getTracks().forEach((track) => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch (err) {
+        alert("Microphone permission required for ambient audio recording.");
+      }
+    }
+  };
 
   const triggerAlert = useCallback(
     async (level: AlertLevel) => {
@@ -119,6 +265,11 @@ function LiveRideContent() {
         if (data.incident) {
           setAlertSent(level);
           setShowConfirm(null);
+          if (level === "sos") {
+            // Automatically sound alarm on SOS
+            stopSirenRef.current = playEmergencySiren();
+            setSirenActive(true);
+          }
         }
       } catch (err) {
         console.error("Failed", err);
@@ -131,6 +282,8 @@ function LiveRideContent() {
 
   const endRide = async () => {
     if (!sessionId) return;
+    if (stopSirenRef.current) stopSirenRef.current();
+    if (stopRingRef.current) stopRingRef.current();
     await fetch("/api/sessions", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -153,12 +306,20 @@ function LiveRideContent() {
 
   if (rideEnded) {
     return (
-      <div className="min-h-screen bg-[#FFF5F8] flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FFF5F8] flex flex-col items-center justify-center px-6 text-center">
         <div className="w-20 h-20 rounded-3xl bg-emerald-500 text-white flex items-center justify-center mb-6 shadow-xl shadow-emerald-500/30">
           <CheckCircleIcon className="w-10 h-10" />
         </div>
         <h1 className="text-3xl font-black text-pink-950 mb-2">Ride Completed Safely</h1>
-        <p className="text-pink-700 font-medium mb-8">Total Trip Duration: {elapsedTime}</p>
+        <p className="text-pink-700 font-medium mb-6">Total Trip Duration: {elapsedTime}</p>
+        
+        {recordedAudioUrl && (
+          <div className="mb-8 p-4 glass-card max-w-sm w-full">
+            <p className="text-xs font-bold text-pink-900 mb-2">Saved Ambient Audio Evidence:</p>
+            <audio src={recordedAudioUrl} controls className="w-full" />
+          </div>
+        )}
+
         <Link href="/" className="px-8 py-3.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-2xl font-extrabold shadow-lg shadow-pink-500/30">
           Return to Dashboard
         </Link>
@@ -182,15 +343,29 @@ function LiveRideContent() {
             <li className="flex items-center gap-3"><CheckCircleIcon className="w-5 h-5 text-emerald-600"/> Real-time GPS tracking stream active</li>
           </ul>
         </div>
-        <a
-          href={`https://wa.me/?text=${whatsappMessage}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold shadow-lg mb-4 flex items-center gap-2"
-        >
-          <span>Share Alert via WhatsApp</span>
-        </a>
-        <Link href="/" className="px-6 py-3 bg-pink-950 text-white rounded-xl text-sm font-bold">
+        
+        <div className="flex flex-col gap-3 w-full max-w-md mb-4">
+          <button
+            onClick={toggleSiren}
+            className={`w-full py-3.5 rounded-xl text-sm font-extrabold shadow-lg flex items-center justify-center gap-2 ${
+              sirenActive ? "bg-black text-white" : "bg-rose-600 text-white"
+            }`}
+          >
+            <Volume2Icon className="w-5 h-5" />
+            <span>{sirenActive ? "Stop Emergency Siren" : "Sound Deterrent Siren"}</span>
+          </button>
+
+          <a
+            href={`https://wa.me/?text=${whatsappMessage}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3.5 bg-emerald-600 text-white rounded-xl text-sm font-extrabold shadow-lg flex items-center justify-center gap-2 text-center"
+          >
+            <span>Share Alert via WhatsApp</span>
+          </a>
+        </div>
+
+        <Link href="/" className="px-6 py-2.5 bg-pink-950 text-white rounded-xl text-xs font-bold">
           Back to Home
         </Link>
       </div>
@@ -199,20 +374,20 @@ function LiveRideContent() {
 
   return (
     <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern flex flex-col pb-12 text-pink-950">
-      {/* SIMULATED FAKE CALL OVERLAY */}
+      {/* SIMULATED FAKE CALL WITH REAL AUDIO RING */}
       {fakeCall && (
-        <div className="fixed inset-0 z-50 bg-black/90 text-white flex flex-col items-center justify-between p-12">
+        <div className="fixed inset-0 z-50 bg-black/95 text-white flex flex-col items-center justify-between p-12">
           <div className="text-center mt-12">
-            <p className="text-xs uppercase tracking-widest text-pink-400 font-bold mb-2">Incoming GuardHer Protection Call</p>
+            <p className="text-xs uppercase tracking-widest text-pink-400 font-bold mb-2">Incoming GuardHer Ringing...</p>
             <p className="text-3xl font-black">Abbu (Father)</p>
-            <p className="text-sm text-gray-400 mt-1">Checking live route &amp; vehicle location...</p>
+            <p className="text-sm text-gray-400 mt-1">Audio ringing from speaker to deter driver</p>
           </div>
           <div className="w-24 h-24 rounded-full bg-pink-600/30 border-2 border-pink-500 animate-ping flex items-center justify-center">
             <PhoneCallIcon className="w-10 h-10 text-pink-400" />
           </div>
           <button
-            onClick={() => setFakeCall(false)}
-            className="w-full max-w-xs py-4 bg-rose-600 text-white rounded-2xl font-black text-base shadow-lg"
+            onClick={handleStopFakeCall}
+            className="w-full max-w-xs py-4 bg-rose-600 text-white rounded-2xl font-black text-base shadow-lg hover:scale-105 active:scale-95 transition-all"
           >
             End Simulated Call
           </button>
@@ -262,6 +437,15 @@ function LiveRideContent() {
         </button>
       </div>
 
+      {/* VOICE DETECTION BANNER */}
+      {voiceListening && (
+        <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-600 text-white px-6 py-2 text-center text-xs font-bold flex items-center justify-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+          <span>Hands-Free Voice SOS Active: Say &ldquo;Help&rdquo; or &ldquo;Bachao&rdquo; to auto-trigger SOS</span>
+          {detectedPhrase && <span className="underline ml-2">Detected: &ldquo;{detectedPhrase}&rdquo;</span>}
+        </div>
+      )}
+
       {/* REAL-TIME INTERACTIVE MAP SHOWCASE */}
       <div className="max-w-xl mx-auto w-full px-6 pt-6">
         <InteractiveMap
@@ -289,11 +473,24 @@ function LiveRideContent() {
           </div>
           <div className="grid grid-cols-2 gap-3 text-xs font-semibold text-pink-800">
             <div><span className="text-pink-400">Driver:</span> {session.ride.driverName}</div>
-            <div><span className="text-pink-400">Speed:</span> {speed} km/h</div>
+            <div><span className="text-pink-400">Speed:</span> {speed} km/h {isRealGps ? "(GPS Lock)" : ""}</div>
             <div className="col-span-2 truncate"><span className="text-pink-400">Route:</span> {session.ride.pickup} → {session.ride.destination}</div>
           </div>
         </div>
       </div>
+
+      {/* RECORDED AUDIO EVIDENCE PLAYER (IF CREATED) */}
+      {recordedAudioUrl && (
+        <div className="max-w-xl mx-auto w-full px-6 pt-4">
+          <div className="glass-card p-4 border border-rose-200">
+            <p className="text-xs font-bold text-rose-800 mb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+              Recorded Ambient Audio Evidence Ready
+            </p>
+            <audio src={recordedAudioUrl} controls className="w-full h-8" />
+          </div>
+        </div>
+      )}
 
       {/* MAIN PANIC ACTION CENTER */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 max-w-xl mx-auto w-full gap-4">
@@ -323,36 +520,50 @@ function LiveRideContent() {
           </div>
         </button>
 
-        {/* EXTRA SAFETY TOOLS */}
-        <div className="grid grid-cols-3 gap-3 w-full">
+        {/* EXTRA SAFETY TOOLS (ALL FUNCTIONAL) */}
+        <div className="grid grid-cols-4 gap-2.5 w-full">
           <button
-            onClick={() => setFakeCall(true)}
-            className="p-3.5 glass-card text-center hover:bg-white transition-all flex flex-col items-center gap-1.5"
+            onClick={handleStartFakeCall}
+            className="p-3 glass-card text-center hover:bg-white transition-all flex flex-col items-center gap-1.5"
+            title="Plays audible ringtone from speaker"
           >
             <PhoneCallIcon className="w-5 h-5 text-pink-600" />
-            <span className="text-[11px] font-extrabold text-pink-950">Fake Call</span>
+            <span className="text-[10px] font-extrabold text-pink-950">Fake Call</span>
           </button>
 
           <button
-            onClick={() => setRecording(!recording)}
-            className={`p-3.5 glass-card text-center transition-all flex flex-col items-center gap-1.5 ${
-              recording ? "bg-rose-50 border-rose-400" : ""
+            onClick={handleToggleRecordAudio}
+            className={`p-3 glass-card text-center transition-all flex flex-col items-center gap-1.5 ${
+              isRecording ? "bg-rose-50 border-rose-400" : ""
             }`}
+            title="Real microphone audio capture"
           >
-            <MicIcon className={`w-5 h-5 ${recording ? "text-rose-600 animate-pulse" : "text-pink-600"}`} />
-            <span className="text-[11px] font-extrabold text-pink-950">
-              {recording ? "Recording..." : "Silent Rec"}
+            <MicIcon className={`w-5 h-5 ${isRecording ? "text-rose-600 animate-ping" : "text-pink-600"}`} />
+            <span className="text-[10px] font-extrabold text-pink-950">
+              {isRecording ? "Stop Rec" : "Record Mic"}
             </span>
+          </button>
+
+          <button
+            onClick={toggleSiren}
+            className={`p-3 glass-card text-center transition-all flex flex-col items-center gap-1.5 ${
+              sirenActive ? "bg-black text-white border-rose-600" : ""
+            }`}
+            title="High decibel sound oscillator"
+          >
+            <Volume2Icon className={`w-5 h-5 ${sirenActive ? "text-rose-500 animate-bounce" : "text-pink-600"}`} />
+            <span className="text-[10px] font-extrabold">{sirenActive ? "Stop Siren" : "Siren"}</span>
           </button>
 
           <a
             href={`https://wa.me/?text=${whatsappMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-3.5 glass-card text-center hover:bg-emerald-50 transition-all flex flex-col items-center gap-1.5 text-emerald-700"
+            className="p-3 glass-card text-center hover:bg-emerald-50 transition-all flex flex-col items-center gap-1.5 text-emerald-700"
+            title="Pre-fills WhatsApp emergency message"
           >
             <span className="text-base font-bold">💬</span>
-            <span className="text-[11px] font-extrabold">WhatsApp</span>
+            <span className="text-[10px] font-extrabold">WhatsApp</span>
           </a>
         </div>
       </div>

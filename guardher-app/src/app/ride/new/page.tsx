@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { RidePlatform, Relationship } from "@/lib/types";
+import type { RidePlatform, Relationship, TrustedContact } from "@/lib/types";
 
 const platforms: { name: RidePlatform; color: string }[] = [
   { name: "InDrive", color: "from-green-500 to-emerald-600" },
@@ -40,6 +40,10 @@ function CheckCircleIcon({ className = "" }: { className?: string }) {
   );
 }
 
+interface SelectableContact extends TrustedContact {
+  selected: boolean;
+}
+
 export default function NewRidePage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -56,16 +60,29 @@ export default function NewRidePage() {
   const [destination, setDestination] = useState("");
 
   // Contacts
-  const [contacts, setContacts] = useState([
-    { id: "tc-001", name: "Ammi (Mother)", phone: "0300-9876543", relationship: "Parent" as Relationship, selected: true },
-    { id: "tc-002", name: "Tariq (Brother)", phone: "0321-4567890", relationship: "Brother" as Relationship, selected: true },
-    { id: "tc-003", name: "Zainab (Friend)", phone: "0333-1122334", relationship: "Friend" as Relationship, selected: false },
-  ]);
-
+  const [contacts, setContacts] = useState<SelectableContact[]>([]);
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
   const [newContactRel, setNewContactRel] = useState<Relationship>("Friend");
 
+  // Load existing user & contacts from server API
+  useEffect(() => {
+    fetch("/api/user")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user?.trustedContacts) {
+          setContacts(
+            data.user.trustedContacts.map((c: TrustedContact, idx: number) => ({
+              ...c,
+              selected: idx < 2, // Default select first two
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Check for active session on load
   useEffect(() => {
     fetch("/api/sessions?active=true")
       .then((res) => res.json())
@@ -97,20 +114,50 @@ export default function NewRidePage() {
     );
   };
 
-  const addContact = () => {
+  const addContact = async () => {
     if (!newContactName || !newContactPhone) return;
-    setContacts((prev) => [
-      ...prev,
-      {
-        id: `tc-new-${Date.now()}`,
-        name: newContactName,
-        phone: newContactPhone,
-        relationship: newContactRel,
-        selected: true,
-      },
-    ]);
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          addContact: {
+            name: newContactName,
+            phone: newContactPhone,
+            relationship: newContactRel,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.user?.trustedContacts) {
+        setContacts(
+          data.user.trustedContacts.map((c: TrustedContact) => ({
+            ...c,
+            selected: true,
+          }))
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    }
     setNewContactName("");
     setNewContactPhone("");
+  };
+
+  const removeContact = async (id: string) => {
+    try {
+      const res = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeContactId: id }),
+      });
+      const data = await res.json();
+      if (data.user?.trustedContacts) {
+        setContacts((prev) => prev.filter((c) => c.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const startSafeRide = async () => {
@@ -140,7 +187,7 @@ export default function NewRidePage() {
 
   return (
     <div className="min-h-screen bg-[#FFF5F8] bg-grid-pattern pb-24 text-pink-950">
-      {/* ===== NAVBAR ===== */}
+      {/* NAVBAR */}
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/85 border-b border-pink-100 shadow-sm">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
@@ -185,7 +232,7 @@ export default function NewRidePage() {
               <div>
                 <h1 className="text-2xl font-black text-pink-950 tracking-tight">Preload Ride Details</h1>
                 <p className="text-xs text-pink-700 font-medium mt-1">
-                  Input driver & vehicle info before entering the vehicle for zero-typing panic dispatch.
+                  Input driver &amp; vehicle info before entering the vehicle for zero-typing panic dispatch.
                 </p>
               </div>
               <button
@@ -308,34 +355,46 @@ export default function NewRidePage() {
           <div className="glass-card p-8 sm:p-10 shadow-2xl border border-pink-200">
             <h1 className="text-2xl font-black text-pink-950 tracking-tight mb-2">Guardian Sync</h1>
             <p className="text-xs text-pink-700 font-medium mb-6">
-              Select who will receive your continuous live tracking map via instant SMS link.
+              Select contacts from your saved profile or add new guardians (stored securely).
             </p>
 
             <div className="space-y-3 mb-6">
               {contacts.map((c) => (
-                <button
+                <div
                   key={c.id}
-                  onClick={() => toggleContact(c.id)}
-                  className={`w-full flex items-center p-4 rounded-2xl border transition-all ${
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${
                     c.selected
                       ? "bg-pink-100/60 border-pink-400 shadow-sm"
                       : "bg-white border-pink-200 hover:bg-pink-50"
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-lg border flex items-center justify-center mr-4 transition-all ${c.selected ? "bg-pink-600 border-pink-600 text-white" : "border-pink-300 bg-white"}`}>
-                    {c.selected && <CheckCircleIcon className="w-4 h-4" />}
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-extrabold text-pink-950">{c.name}</div>
-                    <div className="text-xs text-pink-700 font-semibold">{c.phone} • {c.relationship}</div>
-                  </div>
-                </button>
+                  <button
+                    onClick={() => toggleContact(c.id)}
+                    className="flex items-center text-left flex-1"
+                  >
+                    <div className={`w-6 h-6 rounded-lg border flex items-center justify-center mr-4 transition-all ${c.selected ? "bg-pink-600 border-pink-600 text-white" : "border-pink-300 bg-white"}`}>
+                      {c.selected && <CheckCircleIcon className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="text-sm font-extrabold text-pink-950">{c.name}</div>
+                      <div className="text-xs text-pink-700 font-semibold">{c.phone} • {c.relationship}</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => removeContact(c.id)}
+                    className="text-xs text-rose-500 hover:text-rose-700 font-bold px-2 py-1"
+                    title="Delete Contact"
+                  >
+                    ✕
+                  </button>
+                </div>
               ))}
             </div>
 
             <div className="border-t border-pink-200/80 pt-6 mb-6">
               <label className="block text-xs font-bold uppercase tracking-wider text-pink-900 mb-3">
-                + Add Another Guardian
+                + Add Another Guardian (Saved to Profile)
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <input
@@ -365,7 +424,7 @@ export default function NewRidePage() {
                   onClick={addContact}
                   className="px-5 py-2.5 bg-pink-900 text-white rounded-xl text-sm font-extrabold hover:bg-pink-950 transition-colors"
                 >
-                  Add Contact
+                  Save &amp; Select
                 </button>
               </div>
             </div>

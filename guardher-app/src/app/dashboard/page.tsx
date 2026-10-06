@@ -33,6 +33,9 @@ export default function DashboardPage() {
   const [incidents, setIncidents] = useState<IncidentCase[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<IncidentCase | null>(null);
   const [loading, setLoading] = useState(true);
+  const [regionFilter, setRegionFilter] = useState<string>("All");
+  const [notesText, setNotesText] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
 
   useEffect(() => {
     const fetchIncidents = async () => {
@@ -51,6 +54,12 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (selectedIncident) {
+      setNotesText(selectedIncident.notes || "");
+    }
+  }, [selectedIncident]);
+
   const resolveIncident = async (id: string, resolution: string) => {
     await fetch("/api/incidents", {
       method: "PATCH",
@@ -64,6 +73,31 @@ export default function DashboardPage() {
       setSelectedIncident({ ...selectedIncident, resolution: resolution as IncidentCase["resolution"] });
     }
   };
+
+  const handleSaveNotes = async () => {
+    if (!selectedIncident) return;
+    setSavingNotes(true);
+    try {
+      await fetch("/api/incidents", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedIncident.id, notes: notesText }),
+      });
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === selectedIncident.id ? { ...i, notes: notesText } : i))
+      );
+      setSelectedIncident({ ...selectedIncident, notes: notesText });
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const filteredIncidents = incidents.filter((i) => {
+    if (regionFilter === "All") return true;
+    const dest = i.session.ride.destination.toLowerCase();
+    const pick = i.session.ride.pickup.toLowerCase();
+    return dest.includes(regionFilter.toLowerCase()) || pick.includes(regionFilter.toLowerCase());
+  });
 
   const activeCount = incidents.filter((i) => i.resolution === "pending").length;
   const sosCount = incidents.filter((i) => i.alertLevel === "sos" && i.resolution === "pending").length;
@@ -79,25 +113,43 @@ export default function DashboardPage() {
           </Link>
           <span className="text-pink-300">|</span>
           <span className="text-xs font-bold uppercase tracking-wider text-pink-700 bg-pink-100 px-3 py-1 rounded-full">
-            Karachi &amp; Lahore Control Command
+            National Women Safety Command
           </span>
         </div>
+
+        {/* REGION FILTER TABS */}
+        <div className="hidden sm:flex items-center gap-1 bg-pink-100/60 p-1 rounded-xl">
+          {["All", "Lahore", "Karachi", "Islamabad"].map((city) => (
+            <button
+              key={city}
+              onClick={() => setRegionFilter(city)}
+              className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
+                regionFilter === city
+                  ? "bg-white text-pink-950 shadow-sm"
+                  : "text-pink-700 hover:text-pink-950"
+              }`}
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-4">
           {sosCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-100 border border-rose-300">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
-              <span className="text-xs font-black text-rose-700">{sosCount} ACTIVE SOS DISPATCH</span>
+              <span className="text-xs font-black text-rose-700">{sosCount} ACTIVE SOS</span>
             </div>
           )}
           <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            15 Emergency Sync Active
+            15 Police Linked
           </div>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* SIDEBAR */}
-        <aside className="w-80 bg-white border-r border-pink-200 flex flex-col">
+        {/* SIDEBAR QUEUE */}
+        <aside className="w-84 bg-white border-r border-pink-200 flex flex-col">
           <div className="grid grid-cols-2 gap-px bg-pink-200 border-b border-pink-200">
             <div className="bg-white p-4 text-center">
               <div className="text-2xl font-black text-amber-500">{activeCount}</div>
@@ -111,11 +163,11 @@ export default function DashboardPage() {
           
           <div className="flex-1 overflow-y-auto">
             {loading ? (
-              <div className="p-6 text-center text-xs font-bold text-pink-600">Syncing Cases...</div>
-            ) : incidents.length === 0 ? (
-              <div className="p-6 text-center text-xs font-bold text-pink-700">No active emergency dispatches.</div>
+              <div className="p-6 text-center text-xs font-bold text-pink-600">Syncing Dispatch Queue...</div>
+            ) : filteredIncidents.length === 0 ? (
+              <div className="p-6 text-center text-xs font-bold text-pink-700">No active dispatches in {regionFilter}.</div>
             ) : (
-              incidents
+              filteredIncidents
                 .sort((a, b) => b.triggerTime - a.triggerTime)
                 .map((incident) => (
                   <button
@@ -143,7 +195,7 @@ export default function DashboardPage() {
                       {incident.session.ride.vehicleModel} — {incident.session.ride.numberPlate}
                     </div>
                     <div className="text-[11px] font-medium text-pink-700 mt-1 flex justify-between">
-                      <span>{incident.session.ride.platform}</span>
+                      <span>{incident.session.ride.platform} ({incident.session.ride.driverName})</span>
                       <span>{new Date(incident.triggerTime).toLocaleTimeString()}</span>
                     </div>
                   </button>
@@ -159,16 +211,26 @@ export default function DashboardPage() {
               <div className={`rounded-2xl p-6 border shadow-md ${
                 selectedIncident.alertLevel === "sos" ? "bg-rose-50 border-rose-300 text-rose-950" : "bg-amber-50 border-amber-300 text-amber-950"
               }`}>
-                <div className="flex items-center gap-4">
-                  <AlertTriangleIcon className={`w-8 h-8 shrink-0 ${selectedIncident.alertLevel === "sos" ? "text-rose-600 animate-bounce" : "text-amber-600"}`} />
-                  <div>
-                    <h1 className="text-2xl font-black">
-                      {selectedIncident.alertLevel === "sos" ? "Priority 1: Emergency SOS Dispatch" : "Priority 2: Safety Check-In Alert"}
-                    </h1>
-                    <div className="text-xs font-semibold mt-1 opacity-80">
-                      Case ID: {selectedIncident.id} • Opened: {new Date(selectedIncident.triggerTime).toLocaleString()}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <AlertTriangleIcon className={`w-8 h-8 shrink-0 ${selectedIncident.alertLevel === "sos" ? "text-rose-600 animate-bounce" : "text-amber-600"}`} />
+                    <div>
+                      <h1 className="text-2xl font-black">
+                        {selectedIncident.alertLevel === "sos" ? "Priority 1: Emergency SOS Dispatch" : "Priority 2: Safety Check-In Alert"}
+                      </h1>
+                      <div className="text-xs font-semibold mt-1 opacity-80">
+                        Case ID: {selectedIncident.id} • Opened: {new Date(selectedIncident.triggerTime).toLocaleString()}
+                      </div>
                     </div>
                   </div>
+
+                  {/* QUICK CALL ACTION */}
+                  <a
+                    href="tel:15"
+                    className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-black shadow-md hover:bg-rose-700 flex items-center gap-1.5"
+                  >
+                    <span>Direct Call 15</span>
+                  </a>
                 </div>
               </div>
 
@@ -212,7 +274,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="text-xs font-semibold text-pink-700">
-                        Last Ping: {new Date(selectedIncident.session.currentLocation.timestamp).toLocaleTimeString()}
+                        Speed: {selectedIncident.session.currentLocation.speed || 35} km/h • Last Ping: {new Date(selectedIncident.session.currentLocation.timestamp).toLocaleTimeString()}
                       </div>
                     </div>
                   ) : (
@@ -221,10 +283,30 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* OPERATIONAL DISPATCH NOTES */}
+              <div className="glass-card p-6">
+                <h3 className="text-xs font-black uppercase tracking-wider text-pink-600 mb-2">
+                  Dispatch Operational Notes (Saved Live)
+                </h3>
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  placeholder="Record dispatcher logs, police call details, or vehicle interception status..."
+                  className="w-full h-24 p-3 rounded-xl border border-pink-200 bg-white text-xs font-medium focus:ring-2 focus:ring-pink-500/20 outline-none"
+                />
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                  className="mt-2 px-4 py-2 bg-pink-900 text-white rounded-xl text-xs font-bold hover:bg-pink-950 transition-colors"
+                >
+                  {savingNotes ? "Saving..." : "Save Operational Notes"}
+                </button>
+              </div>
+
               {selectedIncident.resolution === "pending" ? (
-                <div className="flex flex-wrap gap-4 pt-4 border-t border-pink-200">
+                <div className="flex flex-wrap gap-4 pt-2 border-t border-pink-200">
                   <button onClick={() => resolveIncident(selectedIncident.id, "dispatched")} className="px-6 py-3 bg-rose-600 text-white rounded-xl text-xs font-extrabold shadow-lg hover:bg-rose-700 transition-all">
-                    Dispatch Rescue Units
+                    Dispatch Police Units
                   </button>
                   <button onClick={() => resolveIncident(selectedIncident.id, "resolved")} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-xs font-extrabold shadow-lg hover:bg-pink-700 transition-all">
                     Mark Resolved
@@ -234,7 +316,7 @@ export default function DashboardPage() {
                   </button>
                 </div>
               ) : (
-                <div className="pt-4 border-t border-pink-200 flex items-center gap-2 text-sm font-extrabold text-pink-800">
+                <div className="pt-2 border-t border-pink-200 flex items-center gap-2 text-sm font-extrabold text-pink-800">
                   <CheckCircleIcon className="w-5 h-5 text-emerald-600" />
                   Status: <span className="uppercase text-emerald-700">{selectedIncident.resolution}</span>
                 </div>
@@ -244,7 +326,7 @@ export default function DashboardPage() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center text-pink-700 font-bold">
                 <ShieldIcon className="w-12 h-12 mx-auto mb-4 text-pink-300" />
-                <p>Select an emergency case from the left panel to inspect.</p>
+                <p>Select an emergency case from the queue to coordinate response.</p>
               </div>
             </div>
           )}
