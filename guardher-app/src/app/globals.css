@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
@@ -18,19 +20,71 @@ html {
 
 body {
   font-family: var(--font-body);
-  background-color: #F9FAFB;
-  color: #111827;
+  background-color: #FFF5F7;
+  color: #1F1116;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-/* Minimal Utilities */
+/* Custom Glassmorphism & AI Aesthetics */
 @layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(244, 114, 182, 0.25);
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 40px -15px rgba(236, 72, 153, 0.08), 0 0 15px 0 rgba(244, 114, 182, 0.05);
+  }
+
+  .glass-card-dark {
+    background: rgba(26, 12, 22, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(244, 114, 182, 0.2);
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.5), 0 0 30px 0 rgba(236, 72, 153, 0.15);
+  }
+
+  .text-gradient-pink {
+    background: linear-gradient(135deg, #EC4899 0%, #DB2777 50%, #9333EA 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-gradient-pink-glow {
+    background: radial-gradient(circle at 50% 50%, rgba(244, 114, 182, 0.18) 0%, rgba(255, 241, 245, 0) 70%);
+  }
+
+  .bg-grid-pattern {
+    background-image: radial-gradient(rgba(236, 72, 153, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
   .card {
     background-color: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 0.75rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(244, 114, 182, 0.2);
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.04);
   }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
 }

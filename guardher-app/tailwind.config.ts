@@ -10,19 +10,21 @@ const config: Config = {
     extend: {
       colors: {
         guardher: {
-          bg: "#F9FAFB",
+          bg: "#FFF5F8",
           surface: "#FFFFFF",
-          "surface-alt": "#F3F4F6",
-          border: "#E5E7EB",
-          "border-dark": "#D1D5DB",
-          text: "#111827",
-          "text-muted": "#6B7280",
-          primary: "#EC4899", // Pink
+          "surface-alt": "#FCE7F3",
+          border: "#FBCFE8",
+          "border-dark": "#F472B6",
+          text: "#1F1116",
+          "text-muted": "#835368",
+          primary: "#EC4899", // Vibrant Pink
           "primary-hover": "#DB2777",
-          danger: "#DC2626", // Red
-          "danger-hover": "#B91C1C",
-          warning: "#D97706", // Amber
-          "warning-hover": "#B45309",
+          "primary-dark": "#BE185D",
+          "primary-light": "#FDF2F8",
+          danger: "#E11D48", // Rose Red
+          "danger-hover": "#BE123C",
+          warning: "#F59E0B",
+          "warning-hover": "#D97706",
         },
       },
     },
